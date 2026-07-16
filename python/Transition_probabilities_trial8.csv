@@ -1,0 +1,13 @@
+Treatment,Probability,DeltaN
+Balanced,0.39844985,1
+Unbalanced,0.351153988,1
+Balanced,0.266466729,2
+Unbalanced,0.299982497,2
+Balanced,0.195793058,3
+Unbalanced,0.230405505,3
+Balanced,0.101275558,4
+Unbalanced,0.089207699,4
+Balanced,0.038014805,0
+Unbalanced,0.029250311,0
+Balanced,0.226622822,ChangeDir
+Unbalanced,0.312683853,ChangeDir
