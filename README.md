@@ -41,7 +41,7 @@ The `docs` folder contains data dictionaries describing the variables in each pr
 
 The `python` folder contains the Python code used for the Monte Carlo simulations reported in the manuscript.
 
-- **MonteCarlo_trial8_CIs.py** – Performs the Monte Carlo simulations comparing the observed performance of bees with three null models and generates the output files `MonteCarlo_summary.csv` and `MonteCarlo_distributions.csv`.
+- **MonteCarlo_trial8_CIs.py** – Performs the Monte Carlo simulations used to compare observed maze performance with the three null models described in the manuscript and generates the output files `MonteCarlo_summary.csv` and `MonteCarlo_distributions.csv`.
 - **Transition_probabilities_trial8.csv** – Input file containing the empirical transition probabilities measured in trial 8 that are used by the empirical null model.
 
 ## Citation
@@ -65,3 +65,7 @@ The Hebrew University of Jerusalem
 Rehovot, Israel
 
 Email: sharoni.shafir@mail.huji.ac.il
+
+## License
+
+The data and code in this repository are made available under the license provided in the accompanying LICENSE file.
