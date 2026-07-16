@@ -48,7 +48,7 @@ The `python` folder contains the Python code used for the Monte Carlo simulation
 
 If you use the data or code in this repository, please cite the associated publication:
 
-Rozenbaum, N., Shafir, S., et al. *Dietary fatty acid balance shapes spatial learning and landmark use in honey bees.* Citation details will be updated upon publication.
+Rozenbaum, E., Shrot, T., Daltrophe, H., Tietel, Z. and S. Shafir. *Dietary fatty acid balance shapes spatial learning and landmark use in honey bees.* Citation details will be updated upon publication.
 
 If you use the datasets in this repository in your own work, please also cite this GitHub repository, using the repository URL.
 
