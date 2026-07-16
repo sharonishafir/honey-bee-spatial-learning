@@ -37,9 +37,31 @@ The `docs` folder contains data dictionaries describing the variables in each pr
 - **FattyAcids_data_dictionary.xlsx** – Variable descriptions for `FattyAcids.csv`.
 - **LandmarkLearning_data_dictionary.xlsx** – Variable descriptions for `LandmarkLearning.csv`.
 
-- ## Python code
+## Python code
 
 The `python` folder contains the Python code used for the Monte Carlo simulations reported in the manuscript.
 
 - **MonteCarlo_trial8_CIs.py** – Performs the Monte Carlo simulations comparing the observed performance of bees with three null models and generates the output files `MonteCarlo_summary.csv` and `MonteCarlo_distributions.csv`.
 - **Transition_probabilities_trial8.csv** – Input file containing the empirical transition probabilities measured in trial 8 that are used by the empirical null model.
+
+## Citation
+
+If you use the data or code in this repository, please cite the associated publication:
+
+Rozenbaum, N., Shafir, S., et al. *Dietary fatty acid balance shapes spatial learning and landmark use in honey bees.* Citation details will be updated upon publication.
+
+If you use the datasets in this repository in your own work, please also cite this GitHub repository, using the repository URL.
+
+## Contact
+
+Questions about the repository or requests for additional information may be directed to:
+
+Sharoni Shafir  
+B. Triwaks Bee Research Center  
+Department of Entomology  
+Institute of Environmental Sciences  
+The Robert H. Smith Faculty of Agriculture, Food and Environment  
+The Hebrew University of Jerusalem  
+Rehovot, Israel
+
+Email: sharoni.shafir@mail.huji.ac.il
