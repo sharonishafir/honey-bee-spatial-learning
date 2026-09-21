@@ -1,0 +1,134 @@
+---
+title: "Maze binomial GLMM analyses"
+output: html_document
+---
+
+This R Markdown file reproduces the three binomial generalized linear mixed-model (GLMM) analyses of maze behavior reported in the manuscript. Models were fitted with `glmmTMB`. Treatment, centered trial number, and their interaction were fitted as fixed effects; colony and bee identity were fitted as random intercepts; and repeated measurements across trials within bees were modeled with an AR(1) correlation structure.
+
+```{r setup, message=FALSE}
+library(readr)
+library(glmmTMB)
+```
+
+# 1. Proportion of direction changes (Fig. 4c)
+
+For each bee and trial, the response is the number of direction changes (`nSwitch`) out of the total number of left and right turns.
+
+```{r direction-changes}
+PropSwitch <- read_csv("PropSwitch.csv", show_col_types = FALSE)
+
+PropSwitch$Treatment <- factor(PropSwitch$Treatment)
+PropSwitch$Colony    <- factor(PropSwitch$Colony)
+PropSwitch$BeeID     <- factor(PropSwitch$BeeID)
+PropSwitch$Trial     <- as.numeric(PropSwitch$Trial)
+
+PropSwitch$totalTurns <- PropSwitch$nL + PropSwitch$nR
+
+PropSwitch$TrialF <- factor(PropSwitch$Trial)
+PropSwitch$Trial_c <- PropSwitch$Trial -
+  mean(PropSwitch$Trial, na.rm = TRUE)
+
+m_switch <- glmmTMB(
+  cbind(nSwitch, totalTurns - nSwitch) ~
+    Treatment * Trial_c +
+    (1 | Colony) +
+    (1 | BeeID) +
+    ar1(TrialF + 0 | BeeID),
+  data = PropSwitch,
+  family = binomial()
+)
+
+summary(m_switch)
+```
+
+# 2. Proportion of transitions to an adjacent arm (Fig. 4d)
+
+For each bee and trial, the response is the number of transitions to an adjacent arm (`n1Switch`) out of the total number of transitions (`nTotalSwitch`).
+
+```{r adjacent-arm}
+df <- read_csv("Prop1stStep.csv", show_col_types = FALSE)
+
+df$Treatment <- factor(df$Treatment)
+df$Colony    <- factor(df$Colony)
+df$BeeID     <- factor(df$BeeID)
+df$Trial     <- as.numeric(df$Trial)
+
+# Retain observations required for the model and ensure valid binomial counts.
+df <- df[
+  complete.cases(
+    df[, c("Treatment", "Colony", "BeeID", "Trial",
+           "n1Switch", "nTotalSwitch")]
+  ),
+]
+
+df$n1Switch     <- round(df$n1Switch)
+df$nTotalSwitch <- round(df$nTotalSwitch)
+
+df <- subset(
+  df,
+  nTotalSwitch > 0 &
+    n1Switch >= 0 &
+    n1Switch <= nTotalSwitch
+)
+
+df$TrialF <- factor(df$Trial)
+df$Trial_c <- df$Trial - mean(df$Trial, na.rm = TRUE)
+
+m_adjacent <- glmmTMB(
+  cbind(n1Switch, nTotalSwitch - n1Switch) ~
+    Treatment * Trial_c +
+    (1 | Colony) +
+    (1 | BeeID) +
+    ar1(TrialF + 0 | BeeID),
+  data = df,
+  family = binomial()
+)
+
+summary(m_adjacent)
+```
+
+# 3. Proportion of arm entries in which bees turned back before reaching the feeder
+
+For each bee and trial, the response is the number of arm entries in which the bee turned back before reaching the feeder (`nRegret`) relative to the number of entries in which the feeder was reached (`nReach`). The analysis uses trials in which all eight distinct arms were completed, as in the original analysis script.
+
+```{r turned-back}
+PropRegret <- read_csv("PropRegret.csv", show_col_types = FALSE)
+
+# Rename response columns for easier coding.
+names(PropRegret)[
+  names(PropRegret) == "Num not reach feeder 9"
+] <- "nRegret"
+names(PropRegret)[
+  names(PropRegret) == "Num reach feeder 9"
+] <- "nReach"
+
+# Keep only valid trials: bees completed all 8 distinct arms.
+PropRegret <- subset(PropRegret, NumDistinctArms == 8)
+
+PropRegret$Treatment <- factor(PropRegret$Treatment)
+PropRegret$Colony    <- factor(PropRegret$Colony)
+PropRegret$BeeID     <- factor(PropRegret$BeeID)
+PropRegret$Trial     <- as.numeric(PropRegret$Trial)
+
+PropRegret$TrialF <- factor(PropRegret$Trial)
+PropRegret$Trial_c <- PropRegret$Trial -
+  mean(PropRegret$Trial, na.rm = TRUE)
+
+m_regret <- glmmTMB(
+  cbind(nRegret, nReach) ~
+    Treatment * Trial_c +
+    (1 | Colony) +
+    (1 | BeeID) +
+    ar1(TrialF + 0 | BeeID),
+  data = PropRegret,
+  family = binomial()
+)
+
+summary(m_regret)
+```
+
+# Session information
+
+```{r session-info}
+sessionInfo()
+```
