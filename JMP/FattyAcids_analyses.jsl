@@ -1,0 +1,209 @@
+// ============================================================
+// FattyAcids_analyses.jsl
+//
+// Reproducibility analyses for body fatty-acid composition
+// Rozenbaum et al.
+//
+// Expected repository structure:
+//     JMP/FattyAcids_analyses.jsl
+//     data/FattyAcids.jmp
+//
+// Open this saved script from the repository JMP folder.
+// The data table is opened automatically from the sibling data folder.
+//
+// Analyses:
+//   1. Fig. 6  - whole-body omega-6:3 ratio among treatments
+//   2. Fig. S4 - omega-6:3 ratio: Treatment x Season
+//   3. Fig. S5 - total EFA (% TFA): Treatment x Season
+//   4. Omega-3 (% TFA): Treatment x Season
+//   5. Omega-6 (% TFA): Treatment x Season
+//
+// For seasonal analyses, the Pollen treatment is excluded,
+// as described in the manuscript. A temporary subset containing
+// only Balanced and Unbalanced bees is created automatically.
+// ============================================================
+
+
+// ------------------------------------------------------------
+// Source data table
+// ------------------------------------------------------------
+
+scriptDir = Get Default Directory();
+dataDir = scriptDir || "../data/";
+
+dt = Open( dataDir || "FattyAcids.jmp" );
+
+
+// ============================================================
+// 1. FIG. 6
+// Whole-body omega-6:3 ratio among treatments
+//
+// Response: w6/w3
+// Fixed effects: Treatment and ColonyID nested within Treatment
+// Tukey HSD comparisons among Treatment LS means
+//
+// Expected results:
+// Treatment: F(2,68) = 82.4, P < 0.0001
+// ColonyID[Treatment]: F(8,68) = 17.9, P < 0.0001
+// ============================================================
+
+dt << Fit Model(
+	Y( :"w6/w3"n ),
+	Effects( :Treatment, :ColonyID[:Treatment] ),
+	Personality( "Standard Least Squares" ),
+	Emphasis( "Effect Leverage" ),
+	Run(
+		:"w6/w3"n << {
+			Summary of Fit( 1 ),
+			Analysis of Variance( 1 ),
+			Parameter Estimates( 1 ),
+			Lack of Fit( 0 ),
+			Scaled Estimates( 0 ),
+			Plot Actual by Predicted( 1 ),
+			Plot Regression( 0 ),
+			Plot Residual by Predicted( 1 ),
+			Plot Studentized Residuals( 0 ),
+			Plot Effect Leverage( 1 ),
+			Plot Residual by Normal Quantiles( 0 ),
+			Box Cox Y Transformation( 0 ),
+			{:Treatment << {LSMeans Tukey HSD( 0.05 )}}
+		}
+	)
+);
+
+
+// ============================================================
+// Create temporary data table for seasonal analyses
+//
+// Only Balanced and Unbalanced treatments are included.
+// The Pollen treatment is excluded from Figs. S4-S5 seasonal
+// analyses.
+// ============================================================
+
+dtSeason = dt << Subset(
+	Rows(
+		dt << Get Rows Where(
+			:Treatment == "Balanced" | :Treatment == "Unbalanced"
+		)
+	),
+	Selected Columns( 0 ),
+	Output Table( "FattyAcids seasonal analyses" )
+);
+
+
+// ============================================================
+// 2. FIG. S4
+// Whole-body omega-6:3 ratio by Treatment and Season
+//
+// Fixed effects:
+//     Treatment
+//     Season
+//     Treatment x Season
+// Random effect:
+//     ColonyID
+//
+// Expected results:
+// Treatment:          F(1,6) = 52.2, P = 0.0004
+// Season:             F(1,6) = 56.9, P = 0.0003
+// Treatment x Season: F(1,6) = 19.0, P = 0.0048
+//
+// ColonyID explains approximately 5.4% of total variance.
+//
+// Tukey:
+// Unbalanced Spring vs Winter: P = 0.0006
+// Balanced Spring vs Winter:   P = 0.21
+// ============================================================
+
+dtSeason << Fit Model(
+	Y( :"w6/w3"n ),
+	Effects( :Treatment, :Season, :Treatment * :Season ),
+	Random Effects( :ColonyID ),
+	NoBounds( 1 ),
+	Personality( "Mixed Model" ),
+	Run(
+		Repeated Effects Covariance Parameter Estimates( 0 ),
+		Multiple Comparisons(
+			Effect( :Treatment * :Season ),
+			Least Squares Means Plot( No Overlay Terms ),
+			Tukey HSD( 1 )
+		)
+	)
+);
+
+
+// ============================================================
+// 3. FIG. S5
+// Total essential fatty acids (EFA) as percentage of TFA
+//
+// Same mixed-model structure as Fig. S4.
+//
+// Expected results:
+// Treatment:          F(1,6) = 1.06, P = 0.343
+// Season:             F(1,6) = 1.70, P = 0.240
+// Treatment x Season: F(1,6) = 0.70, P = 0.436
+// ============================================================
+
+dtSeason << Fit Model(
+	Y( :"EFA: FAT (%)"n ),
+	Effects( :Treatment, :Season, :Treatment * :Season ),
+	Random Effects( :ColonyID ),
+	NoBounds( 1 ),
+	Personality( "Mixed Model" ),
+	Run(
+		Repeated Effects Covariance Parameter Estimates( 0 )
+	)
+);
+
+
+// ============================================================
+// 4. OMEGA-3 COMPONENT OF FIG. S5
+// C18(3) / alpha-linolenic acid (ALA) as percentage of TFA
+//
+// Same mixed-model structure as Fig. S4.
+//
+// Expected results:
+// Treatment:          F(1,6) = 23.04, P = 0.0030
+// Season:             F(1,6) = 34.44, P = 0.0011
+// Treatment x Season: F(1,6) = 1.09, P = 0.336
+//
+// The positive Spring-Winter estimate indicates an increase
+// in omega-3 from winter to spring.
+// ============================================================
+
+dtSeason << Fit Model(
+	Y( :"C18(3) % FA in TFA (W3)"n ),
+	Effects( :Treatment, :Season, :Treatment * :Season ),
+	Random Effects( :ColonyID ),
+	NoBounds( 1 ),
+	Personality( "Mixed Model" ),
+	Run(
+		Repeated Effects Covariance Parameter Estimates( 0 )
+	)
+);
+
+
+// ============================================================
+// 5. OMEGA-6 COMPONENT OF FIG. S5
+// C18(2) / linoleic acid (LA) as percentage of TFA
+//
+// Same mixed-model structure as Fig. S4.
+//
+// Expected results:
+// Treatment:          F(1,6) = 5.75, P = 0.0534
+// Season:             F(1,6) = 8.14, P = 0.0291
+// Treatment x Season: F(1,6) = 0.26, P = 0.631
+//
+// The negative Spring-Winter estimate indicates a decrease
+// in omega-6 from winter to spring.
+// ============================================================
+
+dtSeason << Fit Model(
+	Y( :"C18(2) % FA in TFA (W6)"n ),
+	Effects( :Treatment, :Season, :Treatment * :Season ),
+	Random Effects( :ColonyID ),
+	NoBounds( 1 ),
+	Personality( "Mixed Model" ),
+	Run(
+		Repeated Effects Covariance Parameter Estimates( 0 )
+	)
+);
