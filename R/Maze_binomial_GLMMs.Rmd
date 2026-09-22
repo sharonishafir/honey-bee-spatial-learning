@@ -15,7 +15,7 @@ library(glmmTMB)
 For each bee and trial, the response is the number of direction changes (`nSwitch`) out of the total number of left and right turns.
 
 ```{r direction-changes}
-PropSwitch <- read_csv("PropSwitch.csv", show_col_types = FALSE)
+PropSwitch <- read_csv("../data/PropSwitch.csv", show_col_types = FALSE)
 
 PropSwitch$Treatment <- factor(PropSwitch$Treatment)
 PropSwitch$Colony    <- factor(PropSwitch$Colony)
@@ -46,7 +46,7 @@ summary(m_switch)
 For each bee and trial, the response is the number of transitions to an adjacent arm (`n1Switch`) out of the total number of transitions (`nTotalSwitch`).
 
 ```{r adjacent-arm}
-df <- read_csv("Prop1stStep.csv", show_col_types = FALSE)
+df <- read_csv("../data/Prop1stStep.csv", show_col_types = FALSE)
 
 df$Treatment <- factor(df$Treatment)
 df$Colony    <- factor(df$Colony)
@@ -92,7 +92,7 @@ summary(m_adjacent)
 For each bee and trial, the response is the number of arm entries in which the bee turned back before reaching the feeder (`nRegret`) relative to the number of entries in which the feeder was reached (`nReach`). The analysis uses trials in which all eight distinct arms were completed, as in the original analysis script.
 
 ```{r turned-back}
-PropRegret <- read_csv("PropRegret.csv", show_col_types = FALSE)
+PropRegret <- read_csv("../data/PropRegret.csv", show_col_types = FALSE)
 
 # Rename response columns for easier coding.
 names(PropRegret)[
