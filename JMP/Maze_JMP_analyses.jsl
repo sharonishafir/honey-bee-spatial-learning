@@ -1,0 +1,596 @@
+// ============================================================
+// MAZE EXPERIMENT — REPOSITORY REPRODUCIBILITY SCRIPT
+//
+// Expected repository structure:
+//   JMP/Maze_JMP_analyses.jsl
+//   data/MazeLearning_Visits.jmp
+//   data/MazeLearning_TimeAndDistance.jmp
+//   data/MazeLearning_SidePreferenceConsistency.jmp
+//   data/MazeLearning_InterTrialIntervals.jmp
+//
+// Open this saved script in JMP and run it. Get Default Directory()
+// resolves to the directory containing the active saved script, so the
+// four source tables are opened from ../data/.
+// ============================================================
+
+scriptDir = Get Default Directory();
+dataDir = scriptDir || "../data/";
+
+dtVisits = Open(dataDir || "MazeLearning_Visits.jmp");
+dtTDSource = Open(dataDir || "MazeLearning_TimeAndDistance.jmp");
+dtSideSource = Open(dataDir || "MazeLearning_SidePreferenceConsistency.jmp");
+dtITISource = Open(dataDir || "MazeLearning_InterTrialIntervals.jmp");
+
+// ============================================================
+// 1. TOTAL ARM ENTRIES
+// Fig. 4a
+// ============================================================
+
+dt = dtVisits;
+
+// Start from a clean state: remove any existing row exclusions
+dt << Clear Row States;
+
+// Exclude OdorControl rows
+odorRows = dt << Get Rows Where(:Treatment == "OdorControl");
+If(N Rows(odorRows) > 0,
+    dt << Select Rows(odorRows);
+    dt << Exclude;
+);
+
+// Exclude the three trials with incorrect ad-lib feeding
+badRows = dt << Get Rows Where(
+    (:File name == "S2750004.csv" & :Trial number == 2) |
+    (:File name == "S2810003.csv" & :Trial number == 3) |
+    (:File name == "S3330018.csv" & :Trial number == 2)
+);
+
+If(N Rows(badRows) > 0,
+    dt << Select Rows(badRows);
+    dt << Exclude;
+);
+
+// Clear the row selection, while retaining the exclusions
+dt << Clear Select;
+
+// Run the reported mixed model
+Fit Model(
+    Y(:sqrtTotalArms),
+    Effects(
+        :Treatment,
+        :Trial number,
+        :Trial number * :Treatment
+    ),
+    Random Effects(
+        :Colony[:Treatment],
+        :BeeID[:Colony]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 2. FIRST MISTAKE
+// Fig. 4b
+// OdorControl is excluded.
+// The three trials with incorrect ad-lib feeding are RETAINED,
+// because the first mistake occurred before that feeding.
+// ============================================================
+
+dt = dtVisits;
+
+// Reset row states from the preceding analysis
+dt << Clear Row States;
+
+// Exclude OdorControl only
+odorRows = dt << Get Rows Where(:Treatment == "OdorControl");
+
+If(N Rows(odorRows) > 0,
+    dt << Select Rows(odorRows);
+    dt << Exclude;
+);
+
+dt << Clear Select;
+
+// Run mixed model
+Fit Model(
+    Y(:FirstMistake),
+    Effects(
+        :Treatment,
+        :Trial number,
+        :Trial number * :Treatment
+    ),
+    Random Effects(
+        :Colony[:Treatment],
+        :BeeID[:Colony]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 3. MAGNITUDE OF SIDE BIAS
+// Prop side bias
+// OdorControl is excluded.
+// The three trials with incorrect ad-lib feeding are retained.
+// ============================================================
+
+dt = dtVisits;
+
+// Reset row states from preceding analysis
+dt << Clear Row States;
+
+// Exclude OdorControl only
+odorRows = dt << Get Rows Where(:Treatment == "OdorControl");
+
+If(N Rows(odorRows) > 0,
+    dt << Select Rows(odorRows);
+    dt << Exclude;
+);
+
+dt << Clear Select;
+
+// Run mixed model
+Fit Model(
+    Y(:Prop side bias),
+    Effects(
+        :Treatment,
+        :Trial number,
+        :Trial number * :Treatment
+    ),
+    Random Effects(
+        :Colony[:Treatment],
+        :BeeID[:Colony]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 4. CONSISTENCY OF INDIVIDUAL SIDE PREFERENCE
+// Repository data file: MazeLearning_SidePreferenceConsistency.jmp
+//
+// Side preference was classified separately in Trials 1 and 8:
+//   Proportion R > 0.5  -> R
+//   Proportion R < 0.5  -> L
+//   Proportion R = 0.5  -> tie ("None")
+//
+// Bees with a tie in either trial have a missing Same/Different
+// classification and are omitted automatically.
+//
+// Tests whether the proportion retaining the same side
+// preference differs from the chance expectation of 0.5,
+// separately for each treatment.
+// ============================================================
+
+dtSide = dtSideSource;
+
+dtSide << Distribution(
+    Nominal Distribution(
+        Column(:Same or Diff),
+        Test Probabilities(
+            Test(Hypothesized),
+            0.5,
+            0.5
+        )
+    ),
+    By(:Treatment)
+);
+// ============================================================
+// 5. FINISH TIME
+// Repository data file: MazeLearning_TimeAndDistance.jmp
+//
+// Exclusions:
+//   - OdorControl
+//   - Trials marked "Only 7 arms" (three trials in which
+//     ad-lib feeding occurred after the 7th rather than 8th arm)
+//
+// Response is log10-transformed finish time.
+// ============================================================
+
+dtTD = dtTDSource;
+
+dtTD << Clear Row States;
+
+// Exclude observations not used in this analysis
+excludeRows = dtTD << Get Rows Where(
+    :Treatment == "OdorControl" |
+    :Notes == "Only 7 arms"
+);
+
+If(N Rows(excludeRows) > 0,
+    dtTD << Select Rows(excludeRows);
+    dtTD << Exclude;
+);
+
+dtTD << Clear Select;
+
+// Create log10 finish-time column if it does not already exist
+If(
+    Is Empty(
+        Try(Column(dtTD, "Log10 Finish time (s)"), Empty())
+    ),
+    dtTD << New Column(
+        "Log10 Finish time (s)",
+        Numeric,
+        Continuous,
+        Formula(Log10(:"Finish time (s)"))
+    )
+);
+
+// Run mixed model
+dtTD << Fit Model(
+    Y(:"Log10 Finish time (s)"),
+    Effects(
+        :Treatment,
+        :Trial number,
+        :Trial number * :Treatment
+    ),
+    Random Effects(
+        :ColonyID[:Treatment],
+        :BeeID[:ColonyID]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 6. TOTAL DISTANCE
+// Repository data file: MazeLearning_TimeAndDistance.jmp
+//
+// Exclusions:
+//   - OdorControl
+//   - Trials marked "Only 7 arms"
+//
+// Response is log10-transformed total distance.
+// ============================================================
+
+dtTD = dtTDSource;
+
+dtTD << Clear Row States;
+
+// Exclude observations not used in this analysis
+excludeRows = dtTD << Get Rows Where(
+    :Treatment == "OdorControl" |
+    :Notes == "Only 7 arms"
+);
+
+If(N Rows(excludeRows) > 0,
+    dtTD << Select Rows(excludeRows);
+    dtTD << Exclude;
+);
+
+dtTD << Clear Select;
+
+// Create log10 distance column if it does not already exist
+If(
+    Is Empty(
+        Try(Column(dtTD, "Log10 Total distance (cm)"), Empty())
+    ),
+    dtTD << New Column(
+        "Log10 Total distance (cm)",
+        Numeric,
+        Continuous,
+        Formula(Log10(:"Total distance (cm)"))
+    )
+);
+
+// Run mixed model
+dtTD << Fit Model(
+    Y(:"Log10 Total distance (cm)"),
+    Effects(
+        :Treatment,
+        :Trial number,
+        :Trial number * :Treatment
+    ),
+    Random Effects(
+        :ColonyID[:Treatment],
+        :BeeID[:ColonyID]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 7. INTER-TRIAL INTERVAL
+// Repository data file: MazeLearning_InterTrialIntervals.jmp
+//
+// Response: time between the end of one trial and the start
+// of the next trial (Gap_after_trial_min).
+// Response is log10-transformed because of right skew.
+//
+// Each bee had 8 trials and therefore up to 7 inter-trial
+// intervals. Missing intervals are omitted automatically.
+// ============================================================
+
+dtITI = dtITISource;
+
+// Create log10-transformed response if it does not already exist
+If(
+    Is Empty(
+        Try(Column(dtITI, "Log10 Gap_after_trial_min"), Empty())
+    ),
+    dtITI << New Column(
+        "Log10 Gap_after_trial_min",
+        Numeric,
+        Continuous,
+        Formula(Log10(:Gap_after_trial_min))
+    )
+);
+
+dtITI << Fit Model(
+    Y(:"Log10 Gap_after_trial_min"),
+    Effects(
+        :Treatment,
+        :Trial,
+        :Trial * :Treatment
+    ),
+    Random Effects(
+        :Colony[:Treatment],
+        :Repetition_Bee[:Colony]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:Repetition_Bee),
+    Repeated Effects(:Trial),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 8. ARM ENTRIES — TREATMENT DIFFERENCE ON TRIAL 1
+//
+// Tests whether the treatment difference in total arm entries
+// was already present during the first trial.
+//
+// Response: sqrtTotalArms
+// Treatments: Ratio1 and Ratio5 only
+// Trial: 1
+// ============================================================
+
+dt = dtVisits;
+
+dt << Clear Row States;
+
+// Exclude OdorControl and all trials other than Trial 1
+excludeRows = dt << Get Rows Where(
+    :Treatment == "OdorControl" |
+    :Trial number != 1
+);
+
+If(N Rows(excludeRows) > 0,
+    dt << Select Rows(excludeRows);
+    dt << Exclude;
+);
+
+dt << Clear Select;
+
+dt << Oneway(
+    Y(:sqrtTotalArms),
+    X(:Treatment),
+    Means(1),
+    Mean Diamonds(1)
+);
+
+// ============================================================
+// 9. ARM ENTRIES — RELATIVE BEE AGE COVARIATE
+//
+// Sensitivity analysis testing whether bee age relative to
+// the mean age of its colony accounts for maze performance.
+//
+// Same model and exclusions as Section 1, with relative age
+// added as a covariate.
+// ============================================================
+
+dt = dtVisits;
+
+dt << Clear Row States;
+
+// Exclude OdorControl
+odorRows = dt << Get Rows Where(:Treatment == "OdorControl");
+If(N Rows(odorRows) > 0,
+    dt << Select Rows(odorRows);
+    dt << Exclude;
+);
+
+// Exclude the three trials with incorrect ad-lib feeding
+badRows = dt << Get Rows Where(
+    (:File name == "S2750004.csv" & :Trial number == 2) |
+    (:File name == "S2810003.csv" & :Trial number == 3) |
+    (:File name == "S3330018.csv" & :Trial number == 2)
+);
+
+If(N Rows(badRows) > 0,
+    dt << Select Rows(badRows);
+    dt << Exclude;
+);
+
+dt << Clear Select;
+
+Fit Model(
+    Y(:sqrtTotalArms),
+    Effects(
+    :Treatment,
+    :Trial number,
+    :Trial number * :Treatment,
+    :Age_rel_colony
+),
+    Random Effects(
+        :Colony[:Treatment],
+        :BeeID[:Colony]
+    ),
+    NoBounds(1),
+    Personality("Mixed Model"),
+    Subject(:BeeID),
+    Repeated Effects(:Trial number),
+    Repeated Structure("AR(1)"),
+    Run(Variogram(AR1(1)))
+);
+
+// ============================================================
+// 10. MEAN PROPORTION OF RIGHT TURNS — TRIALS 1 AND 8
+//
+// Tests whether the mean bee-level proportion of right turns
+// differs from the no-side-bias expectation of 0.5.
+//
+// Ordinary one-sample t-tests; population SD is not specified.
+// Only Ratio1 and Ratio5 treatments are included.
+// ============================================================
+
+dt = dtVisits;
+
+dt << Clear Row States;
+
+// Include only the two diet treatments and Trials 1 and 8
+excludeRows = dt << Get Rows Where(
+    :Treatment == "OdorControl" |
+    (:Trial number != 1 & :Trial number != 8)
+);
+
+If(N Rows(excludeRows) > 0,
+    dt << Select Rows(excludeRows);
+    dt << Exclude;
+);
+
+dt << Clear Select;
+
+Distribution(
+    Continuous Distribution(
+        Column(:Proportion R),
+        Test Mean(0.5)
+    ),
+    By(:Trial number)
+);
+
+// ============================================================
+// 11. MAZE MARKINGS-CONTROL EXPERIMENT — ARM VISITS
+// Trial 8
+// ============================================================
+
+dt = dtVisits;
+
+rowsControl8 = dt << Get Rows Where(
+    :Treatment == "OdorControl" &
+    :Trial number == 8 &
+    !Is Missing(:New or Used floor) &
+    !Is Missing(:TotalArms)
+);
+
+dtControl8 = dt << Subset(
+    Rows(rowsControl8),
+    Columns(
+        :Treatment,
+        :BeeID,
+        :Trial number,
+        :New or Used floor,
+        :TotalArms
+    ),
+    Output Table("Markings control Trial 8")
+);
+
+dtControl8 << Clear Row States;
+
+dtControl8 << Oneway(
+    Y(:TotalArms),
+    X(:New or Used floor)
+);
+
+// ============================================================
+// 11b. MAZE MARKINGS-CONTROL EXPERIMENT — ARM VISITS
+// Trial 9
+// ============================================================
+
+dt = dtVisits;
+
+rowsControl9 = dt << Get Rows Where(
+    :Treatment == "OdorControl" &
+    :Trial number == 9 &
+    !Is Missing(:New or Used floor) &
+    !Is Missing(:TotalArms)
+);
+
+dtControl9 = dt << Subset(
+    Rows(rowsControl9),
+    Columns(
+        :Treatment,
+        :BeeID,
+        :Trial number,
+        :New or Used floor,
+        :TotalArms
+    ),
+    Output Table("Markings control Trial 9")
+);
+
+dtControl9 << Clear Row States;
+
+dtControl9 << Oneway(
+    Y(:TotalArms),
+    X(:New or Used floor)
+);
+
+// ============================================================
+// 11c. MAZE MARKINGS-CONTROL EXPERIMENT
+// FINISH TIME AND TOTAL DISTANCE — TRIALS 8 AND 9
+//
+// Repository data file: MazeLearning_TimeAndDistance.jmp
+// OdorControl bees only.
+// New = arm floor replaced after each visit.
+// Used = same arm floor removed and returned.
+// ============================================================
+
+dtTD = dtTDSource;
+
+rowsControlTD = dtTD << Get Rows Where(
+    :Treatment == "OdorControl" &
+    (:Trial number == 8 | :Trial number == 9) &
+    !Is Missing(:New or Used)
+);
+
+dtControlTD = dtTD << Subset(
+    Rows(rowsControlTD),
+    Columns(
+        :Treatment,
+        :BeeID,
+        :Trial number,
+        :"New or Used",
+        :"Finish time (s)",
+        :"Total distance (cm)"
+    ),
+    Output Table("Markings control Time and Distance")
+);
+
+dtControlTD << Clear Row States;
+
+// Trial 8
+dtControlTD << Oneway(
+    Y(:"Finish time (s)", :"Total distance (cm)"),
+    X(:"New or Used"),
+    Where(:Trial number == 8)
+);
+
+// Trial 9
+dtControlTD << Oneway(
+    Y(:"Finish time (s)", :"Total distance (cm)"),
+    X(:"New or Used"),
+    Where(:Trial number == 9)
+);
