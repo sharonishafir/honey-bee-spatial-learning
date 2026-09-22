@@ -489,6 +489,9 @@ Distribution(
 
 dt = dtVisits;
 
+// Remove row states left by preceding analyses before creating the subset
+dt << Clear Row States;
+
 rowsControl8 = dt << Get Rows Where(
     :Treatment == "OdorControl" &
     :Trial number == 8 &
@@ -496,9 +499,10 @@ rowsControl8 = dt << Get Rows Where(
     !Is Missing(:TotalArms)
 );
 
+dt << Select Rows(rowsControl8);
+
 dtControl8 = dt << Subset(
-    Selected Rows(0),
-    Rows(rowsControl8),
+    Selected Rows(1),
     Columns(
         :Treatment,
         :BeeID,
@@ -509,9 +513,7 @@ dtControl8 = dt << Subset(
     Output Table("Markings control Trial 8")
 );
 
-// Subset() can inherit excluded/hidden row states from the source table.
-// Clear those inherited row states in the derived table before analysis.
-dtControl8 << Clear Row States;
+dt << Clear Select;
 
 dtControl8 << Oneway(
     Y(:TotalArms),
@@ -525,6 +527,9 @@ dtControl8 << Oneway(
 
 dt = dtVisits;
 
+// Start from a clean source table before creating the subset
+dt << Clear Row States;
+
 rowsControl9 = dt << Get Rows Where(
     :Treatment == "OdorControl" &
     :Trial number == 9 &
@@ -532,9 +537,10 @@ rowsControl9 = dt << Get Rows Where(
     !Is Missing(:TotalArms)
 );
 
+dt << Select Rows(rowsControl9);
+
 dtControl9 = dt << Subset(
-    Selected Rows(0),
-    Rows(rowsControl9),
+    Selected Rows(1),
     Columns(
         :Treatment,
         :BeeID,
@@ -545,8 +551,7 @@ dtControl9 = dt << Subset(
     Output Table("Markings control Trial 9")
 );
 
-// Clear inherited row states in the derived table.
-dtControl9 << Clear Row States;
+dt << Clear Select;
 
 dtControl9 << Oneway(
     Y(:TotalArms),
@@ -561,33 +566,46 @@ dtControl9 << Oneway(
 // OdorControl bees only.
 // New = arm floor replaced after each visit.
 // Used = same arm floor removed and returned.
-//
-// This is the final analysis section, so it is safe to clear inherited
-// row states on the source time/distance table before applying explicit
-// Where() conditions for the control experiment.
 // ============================================================
 
 dtTD = dtTDSource;
+
+// Remove row states left by the time/distance analyses before creating the subset
 dtTD << Clear Row States;
 
-// Trial 8: finish time and total distance
-dtTD << Oneway(
-    Y(:"Finish time (s)", :"Total distance (cm)"),
-    X(:"New or Used"),
-    Where(
-        :Treatment == "OdorControl" &
-        :Trial number == 8 &
-        !Is Missing(:"New or Used")
-    )
+rowsControlTD = dtTD << Get Rows Where(
+    :Treatment == "OdorControl" &
+    (:Trial number == 8 | :Trial number == 9) &
+    !Is Missing(:New or Used)
 );
 
-// Trial 9: finish time and total distance
-dtTD << Oneway(
+dtTD << Select Rows(rowsControlTD);
+
+dtControlTD = dtTD << Subset(
+    Selected Rows(1),
+    Columns(
+        :Treatment,
+        :BeeID,
+        :Trial number,
+        :"New or Used",
+        :"Finish time (s)",
+        :"Total distance (cm)"
+    ),
+    Output Table("Markings control Time and Distance")
+);
+
+dtTD << Clear Select;
+
+// Trial 8
+dtControlTD << Oneway(
     Y(:"Finish time (s)", :"Total distance (cm)"),
     X(:"New or Used"),
-    Where(
-        :Treatment == "OdorControl" &
-        :Trial number == 9 &
-        !Is Missing(:"New or Used")
-    )
+    Where(:Trial number == 8)
+);
+
+// Trial 9
+dtControlTD << Oneway(
+    Y(:"Finish time (s)", :"Total distance (cm)"),
+    X(:"New or Used"),
+    Where(:Trial number == 9)
 );
