@@ -109,36 +109,7 @@ dtMain << Fit Model(
 );
 
 // ============================================================
-// 3. TRIAL 1 FEEDER VISITS VS. RANDOM EXPECTATION
-// Landmark-learning experiment, Fig. 7a
-//
-// Expected value under random search with replacement = 8 visits.
-// Tests are performed separately for each treatment.
-// ============================================================
-
-// dtMain opened above from repository data folder
-
-// Temporarily exclude all trials except Trial 1
-dtMain << Clear Row States;
-dtMain << Select Where(:Trial != 1);
-dtMain << Exclude;
-
-// Distribution by treatment
-dtMain << Distribution(
-    Continuous Distribution(
-        Column(:NumberFeederVisits),
-        Test Mean(
-            Hypothesized Value(8)
-        )
-    ),
-    By(:Treatment)
-);
-
-// Restore all rows for subsequent analyses
-dtMain << Clear Row States;
-
-// ============================================================
-// 4. NUMBER OF FEEDER VISITS — AGE COVARIATE
+// 3. NUMBER OF FEEDER VISITS — AGE COVARIATE
 // Sensitivity analysis including bee age relative to the
 // mean age of bees from the same colony.
 // ============================================================
@@ -164,7 +135,7 @@ dtMain << Fit Model(
 );
 
 // ============================================================
-// 5. TIME TO FINISH
+// 3. TIME TO FINISH
 // Landmark-learning experiment, Fig. 7b
 //
 // Response: log10 time to finish (seconds)
@@ -209,7 +180,7 @@ dtMain << Fit Model(
 );
 
 // ============================================================
-// 6. DISTANCE FLOWN TO FINISH
+// 3. DISTANCE FLOWN TO FINISH
 // Landmark-learning experiment, Fig. 7c
 //
 // Response: log10 distance flown (cm)
@@ -254,7 +225,7 @@ dtMain << Fit Model(
 );
 
 // ============================================================
-// 7. OVERALL PERFORMANCE ACROSS TRIALS
+// 3. OVERALL PERFORMANCE ACROSS TRIALS
 // Landmark-learning experiment, Fig. 7d
 //
 // Bees were ranked by completion time within each trial.
@@ -333,7 +304,7 @@ dtBeeRank << Oneway(
 );
 
 // ============================================================
-// 8. FEEDER APPROACH DIRECTION
+// 3. FEEDER APPROACH DIRECTION
 // Landmark-learning experiment, Fig. 8b
 //
 // Approach angle was measured 35 cm from the feeder.
